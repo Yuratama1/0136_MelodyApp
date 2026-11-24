@@ -1,4 +1,4 @@
-package com.example.melody
+package com.example.melody.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
