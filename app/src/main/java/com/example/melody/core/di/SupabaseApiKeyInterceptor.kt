@@ -27,7 +27,9 @@ class SupabaseApiKeyInterceptor(
                 .header(API_KEY_HEADER, config.publishableKey)
                 .build()
         } else {
-            request
+            request.newBuilder()
+                .removeHeader(API_KEY_HEADER)
+                .build()
         }
 
         return chain.proceed(configuredRequest)

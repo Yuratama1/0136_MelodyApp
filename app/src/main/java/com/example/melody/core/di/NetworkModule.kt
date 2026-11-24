@@ -38,7 +38,7 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(apiKeyInterceptor: SupabaseApiKeyInterceptor): OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(apiKeyInterceptor)
+            .addNetworkInterceptor(apiKeyInterceptor)
             .build()
 
     @Provides
