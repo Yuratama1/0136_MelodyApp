@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,41 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+fun String.toBuildConfigStringLiteral(): String = buildString {
+    append('"')
+    for (character in this@toBuildConfigStringLiteral) {
+        when (character) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\b' -> append("\\b")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            '\u000C' -> append("\\f")
+            else -> if (character.code < 0x20 || character == '\u2028' || character == '\u2029') {
+                append("\\u${character.code.toString(16).padStart(4, '0')}")
+            } else {
+                append(character)
+            }
+        }
+    }
+    append('"')
+}
+
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties().apply {
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+val supabaseUrl = localProperties.getProperty("supabase.url", "").trim()
+val supabasePublishableKey = localProperties.getProperty("supabase.publishableKey", "").trim()
+
+require(supabasePublishableKey.isBlank() || supabasePublishableKey.startsWith("sb_publishable_")) {
+    "supabase.publishableKey must be a Supabase Publishable Key (sb_publishable_); " +
+        "do not embed a secret or service role key."
 }
 
 android {
@@ -17,6 +54,13 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "SUPABASE_URL", supabaseUrl.toBuildConfigStringLiteral())
+        buildConfigField(
+            "String",
+            "SUPABASE_PUBLISHABLE_KEY",
+            supabasePublishableKey.toBuildConfigStringLiteral(),
+        )
     }
 
     buildTypes {
@@ -32,6 +76,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -58,6 +103,7 @@ dependencies {
 
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)
+    implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.dagger.hilt.android)

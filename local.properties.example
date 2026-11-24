@@ -1,0 +1,3 @@
+# Copy this file to local.properties and keep any existing sdk.dir entry.
+supabase.url=https://YOUR_PROJECT_REF.supabase.co
+supabase.publishableKey=sb_publishable_YOUR_KEY
