@@ -105,14 +105,17 @@ app/src/main/java/com/example/melody/
 │   └── shell/
 │       └── MelodyAppShell.kt
 ├── core/
-│   ├── common/
-│   │   └── UiState.kt
-│   ├── config/
-│   │   └── SupabaseConfig.kt
+│   ├── common/UiState.kt
+│   ├── config/SupabaseConfig.kt
 │   └── di/
+│       ├── AuthRepositoryModule.kt
 │       ├── NetworkModule.kt
 │       └── SupabaseApiKeyInterceptor.kt
+├── data/
+│   ├── remote/auth/                 # Supabase Auth REST API dan DTO (T-06)
+│   └── repository/auth/            # Auth Repository (T-07)
 └── feature/
+    ├── auth/                       # Register, verifikasi email, ViewModel (T-07)
     ├── home/HomeScreen.kt
     ├── library/LibraryScreen.kt
     ├── profile/ProfileScreen.kt
@@ -132,9 +135,9 @@ Konvensi penempatan tanggung jawab untuk kode berikutnya:
 | `data/repository/` | Implementasi repository untuk sumber data. |
 | `feature/<nama>/` | Komponen UI dan logic presentasi per fitur ketika task fitur disetujui. |
 
-Package yang belum memiliki kode tidak dibuat sebagai placeholder. Belum ada ViewModel atau Repository produk pada T-03.
+Package yang belum memiliki kode tidak dibuat sebagai placeholder. T-07 menambahkan Auth Repository dan Auth ViewModel khusus untuk registrasi serta verifikasi email; data/session tidak disimpan secara persisten.
 
-`UiState<T>` di `core/common/UiState.kt` menyediakan `Loading`, `Success(data)`, `Empty`, dan `Error(message, cause)`. Model ini menetapkan bentuk state bersama; ViewModel pemakaiannya akan dibuat saat task fitur terkait.
+`UiState<T>` di `core/common/UiState.kt` menyediakan `Loading`, `Success(data)`, `Empty`, dan `Error(message, cause)`. `AuthViewModel` T-07 memakai state tersebut untuk mengelola operasi registrasi dan verifikasi email.
 
 Dependency injection memakai Hilt. `MelodyApplication` tetap memakai `@HiltAndroidApp` dan `MainActivity` memakai `@AndroidEntryPoint`. Hilt Module ditempatkan di `core/di/` saat ada binding konkret yang perlu disediakan.
 
@@ -171,9 +174,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), dan fondasi jaringan Supabase (T-05) telah dibuat.**
+**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), fondasi Supabase (T-05/T-06), serta Register dan verifikasi email (T-07) telah diimplementasikan untuk review.**
 
-Repository memiliki struktur Android dasar, shared UI State, kerangka navigasi dengan halaman placeholder, dan fondasi jaringan Retrofit/OkHttp yang disediakan Hilt. Pengujian runtime T-04 pada emulator API 37 berhasil. Unit test dan Debug Build untuk fondasi T-05 berhasil; koneksi Supabase belum diuji karena konfigurasi URL dan Publishable Key lokal belum tersedia.
+Fitur T-07 menyediakan form registrasi, validasi lokal, permintaan signup dengan metadata nama tampilan, serta verifikasi token secara manual. Session hasil verifikasi tidak disimpan dan login otomatis belum diterapkan. Unit test dan Debug Build dijalankan; alur ke project Supabase aktif belum diverifikasi karena URL, Publishable Key, serta konfigurasi template email project tidak tersedia di checkout ini.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
