@@ -92,16 +92,26 @@ Antarmuka Jetpack Compose
 
 ### Struktur Package
 
-Struktur yang sudah dibuat pada T-03:
+Struktur package aplikasi saat ini:
 
 ```text
 app/src/main/java/com/example/melody/
 ├── app/
 │   ├── MainActivity.kt
-│   └── MelodyApplication.kt
-└── core/
-    └── common/
-        └── UiState.kt
+│   ├── MelodyApplication.kt
+│   ├── navigation/
+│   │   ├── MelodyNavHost.kt
+│   │   └── MelodyRoute.kt
+│   └── shell/
+│       └── MelodyAppShell.kt
+├── core/
+│   └── common/
+│       └── UiState.kt
+└── feature/
+    ├── home/HomeScreen.kt
+    ├── library/LibraryScreen.kt
+    ├── profile/ProfileScreen.kt
+    └── search/SearchScreen.kt
 ```
 
 Konvensi penempatan tanggung jawab untuk kode berikutnya:
@@ -140,9 +150,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Fondasi proyek Android (T-02) dan arsitektur dasar (T-03) telah dibuat dan diverifikasi.**
+**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), dan shell navigasi (T-04) telah dibuat.**
 
-Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dependency awal, dan shared UI State. Gradle Sync, unit test UiState, dan Debug Build berhasil. Belum ada fitur produk seperti autentikasi, katalog, atau pemutar musik yang diimplementasikan.
+Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dependency awal, shared UI State, dan kerangka navigasi untuk Home, Search, Library, serta Profile. Halaman pada shell tersebut masih berupa placeholder. Status verifikasi T-04 dan review penerimaan dicatat setelah task ini diuji.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
