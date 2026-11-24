@@ -152,7 +152,7 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 **Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), dan shell navigasi (T-04) telah dibuat.**
 
-Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dependency awal, shared UI State, dan kerangka navigasi untuk Home, Search, Library, serta Profile. Halaman pada shell tersebut masih berupa placeholder. Status verifikasi T-04 dan review penerimaan dicatat setelah task ini diuji.
+Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dependency awal, shared UI State, dan kerangka navigasi untuk Home, Search, Library, serta Profile. Halaman pada shell tersebut masih berupa placeholder. Unit test dan Debug Build T-04 berhasil; verifikasi runtime di emulator/perangkat belum dilakukan.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
