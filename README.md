@@ -62,7 +62,14 @@ Hak akses Admin dan pengguna akan ditegakkan oleh backend, bukan hanya melalui t
 
 ## Arsitektur Aplikasi
 
-Melody menggunakan pola MVVM yang dipadukan dengan Repository Pattern. Alur komunikasi data utama direncanakan sebagai berikut:
+Melody menggunakan MVVM yang dipadukan dengan Repository Pattern. Batas tanggung jawab yang digunakan adalah:
+
+- **UI Compose** menampilkan UI State dan meneruskan interaksi pengguna.
+- **ViewModel** mengelola state dan logika presentasi untuk UI.
+- **Repository** menjadi perantara antara ViewModel dan sumber data.
+- **Remote Data Source** menangani komunikasi dengan layanan eksternal.
+
+Alur akses data yang direncanakan:
 
 ```text
 Antarmuka Jetpack Compose
@@ -83,6 +90,38 @@ Antarmuka Jetpack Compose
       PostgreSQL
 ```
 
+### Struktur Package
+
+Struktur yang sudah dibuat pada T-03:
+
+```text
+app/src/main/java/com/example/melody/
+├── app/
+│   ├── MainActivity.kt
+│   └── MelodyApplication.kt
+└── core/
+    └── common/
+        └── UiState.kt
+```
+
+Konvensi penempatan tanggung jawab untuk kode berikutnya:
+
+| Package | Tanggung jawab |
+|---|---|
+| `app/` | Entry point aplikasi dan Activity. |
+| `core/common/` | Tipe dan komponen umum yang benar-benar digunakan lintas bagian, termasuk shared UI State. |
+| `core/di/` | Hilt Module saat ada binding dependency yang diperlukan. Belum ada module karena belum ada binding aplikasi. |
+| `core/model/` | Model yang memang digunakan bersama. Belum dibuat karena belum ada model lintas fitur. |
+| `data/remote/` | Remote data source saat integrasi layanan dibuat. |
+| `data/repository/` | Implementasi repository untuk sumber data. |
+| `feature/<nama>/` | Komponen UI dan logic presentasi per fitur ketika task fitur disetujui. |
+
+Package yang belum memiliki kode tidak dibuat sebagai placeholder. Belum ada ViewModel atau Repository produk pada T-03.
+
+`UiState<T>` di `core/common/UiState.kt` menyediakan `Loading`, `Success(data)`, `Empty`, dan `Error(message, cause)`. Model ini menetapkan bentuk state bersama; ViewModel pemakaiannya akan dibuat saat task fitur terkait.
+
+Dependency injection memakai Hilt. `MelodyApplication` tetap memakai `@HiltAndroidApp` dan `MainActivity` memakai `@AndroidEntryPoint`. Hilt Module ditempatkan di `core/di/` saat ada binding konkret yang perlu disediakan.
+
 Autentikasi menggunakan Supabase Auth. File audio katalog dan gambar katalog disimpan melalui Supabase Storage. Pencarian metadata musik publik dilakukan secara terpisah melalui MusicBrainz API dan tidak menggantikan basis data utama Melody.
 
 ## Penyimpanan dan Pemutaran Musik
@@ -101,9 +140,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Fondasi proyek Android (T-02) telah dibuat dan diverifikasi.**
+**Status saat ini: Fondasi proyek Android (T-02) dan arsitektur dasar (T-03) telah dibuat dan diverifikasi.**
 
-Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dan dependency awal sesuai baseline teknologi. Gradle Sync di Android Studio dan Debug Build berhasil. Belum ada fitur produk seperti autentikasi, katalog, atau pemutar musik yang diimplementasikan.
+Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dependency awal, dan shared UI State. Gradle Sync, unit test UiState, dan Debug Build berhasil. Belum ada fitur produk seperti autentikasi, katalog, atau pemutar musik yang diimplementasikan.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
