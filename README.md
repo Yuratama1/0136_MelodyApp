@@ -101,9 +101,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Persiapan repository. Implementasi aplikasi Android belum dimulai.**
+**Status saat ini: Fondasi proyek Android (T-02) telah dibuat dan diverifikasi.**
 
-Hasil pemeriksaan repository pada saat README ini diperbarui menunjukkan bahwa repository berisi file `.gitignore` dan `README.md`. Struktur proyek Android dan kode sumber aplikasi belum tersedia.
+Repository memiliki struktur Android dasar, konfigurasi Gradle Kotlin DSL, dan dependency awal sesuai baseline teknologi. Gradle Sync di Android Studio dan Debug Build berhasil. Belum ada fitur produk seperti autentikasi, katalog, atau pemutar musik yang diimplementasikan.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
