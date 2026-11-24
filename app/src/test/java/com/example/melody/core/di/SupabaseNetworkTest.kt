@@ -14,54 +14,53 @@ import java.util.concurrent.atomic.AtomicReference
 
 class SupabaseNetworkTest {
     @Test
-    fun interceptorAddsPublishableKeyOnlyAsApikeyHeader() {
+    fun interceptorAddsPublishableKeyForMatchingSupabaseOriginOnlyAsApikey() {
         val publishableKey = "sb_publishable_test-only-value"
         val config = SupabaseConfig("https://melody-test.supabase.co", publishableKey)
-        val observedRequest = AtomicReference<Request>()
-        val client = OkHttpClient.Builder()
-            .addInterceptor(SupabaseApiKeyInterceptor(config))
-            .addInterceptor { chain ->
-                observedRequest.set(chain.request())
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body("{}".toResponseBody())
-                    .build()
-            }
-            .build()
+        val observedRequest = interceptRequest(config, "https://melody-test.supabase.co/rest/v1/")
 
-        client.newCall(Request.Builder().url("https://melody-test.supabase.co/rest/v1/").build())
-            .execute()
-            .close()
-
-        assertEquals(publishableKey, observedRequest.get().header("apikey"))
-        assertNull(observedRequest.get().header("Authorization"))
+        assertEquals(publishableKey, observedRequest.header("apikey"))
+        assertNull(observedRequest.header("Authorization"))
     }
 
     @Test
-    fun incompleteConfigurationDoesNotAddApikeyHeader() {
+    fun requestToDifferentHostDoesNotReceivePublishableKey() {
+        val config = configuredConfig()
+
+        val observedRequest = interceptRequest(config, "https://example.com/rest/v1/")
+
+        assertNull(observedRequest.header("apikey"))
+        assertNull(observedRequest.header("Authorization"))
+    }
+
+    @Test
+    fun requestToDifferentPortDoesNotReceivePublishableKey() {
+        val config = SupabaseConfig(
+            projectUrl = "https://melody-test.supabase.co:8443",
+            publishableKey = TEST_PUBLISHABLE_KEY,
+        )
+
+        val observedRequest = interceptRequest(config, "https://melody-test.supabase.co:8444/rest/v1/")
+
+        assertNull(observedRequest.header("apikey"))
+    }
+
+    @Test
+    fun requestOverHttpDoesNotReceivePublishableKey() {
+        val config = configuredConfig()
+
+        val observedRequest = interceptRequest(config, "http://melody-test.supabase.co/rest/v1/")
+
+        assertNull(observedRequest.header("apikey"))
+    }
+
+    @Test
+    fun missingConfigurationDoesNotAddApikeyHeader() {
         val config = SupabaseConfig("", "")
-        val observedRequest = AtomicReference<Request>()
-        val client = OkHttpClient.Builder()
-            .addInterceptor(SupabaseApiKeyInterceptor(config))
-            .addInterceptor { chain ->
-                observedRequest.set(chain.request())
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(200)
-                    .message("OK")
-                    .body("{}".toResponseBody())
-                    .build()
-            }
-            .build()
+        val observedRequest = interceptRequest(config, "https://example.com/")
 
-        client.newCall(Request.Builder().url("https://example.test/").build()).execute().close()
-
-        assertNull(observedRequest.get().header("apikey"))
-        assertNull(observedRequest.get().header("Authorization"))
+        assertNull(observedRequest.header("apikey"))
+        assertNull(observedRequest.header("Authorization"))
     }
 
     @Test
@@ -78,5 +77,34 @@ class SupabaseNetworkTest {
         assertTrue(json.configuration.ignoreUnknownKeys)
         assertEquals("https://melody-test.supabase.co/", retrofit.baseUrl().toString())
         assertTrue(client.interceptors.contains(interceptor))
+    }
+
+    private fun interceptRequest(config: SupabaseConfig, url: String): Request {
+        val observedRequest = AtomicReference<Request>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor(SupabaseApiKeyInterceptor(config))
+            .addInterceptor { chain ->
+                observedRequest.set(chain.request())
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("{}".toResponseBody())
+                    .build()
+            }
+            .build()
+
+        client.newCall(Request.Builder().url(url).build()).execute().close()
+        return observedRequest.get()
+    }
+
+    private fun configuredConfig() = SupabaseConfig(
+        projectUrl = "https://melody-test.supabase.co",
+        publishableKey = TEST_PUBLISHABLE_KEY,
+    )
+
+    private companion object {
+        const val TEST_PUBLISHABLE_KEY = "sb_publishable_test-only-value"
     }
 }
