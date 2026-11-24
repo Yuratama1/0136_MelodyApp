@@ -16,6 +16,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Query
 
 interface SupabaseAuthApi {
     @POST("auth/v1/signup")
@@ -31,7 +32,10 @@ interface SupabaseAuthApi {
     suspend fun verifyEmail(@Body request: AuthVerifyEmailRequestDto): AuthSessionDto
 
     @POST("auth/v1/recover")
-    suspend fun requestPasswordRecovery(@Body request: AuthRecoveryRequestDto): Response<Unit>
+    suspend fun requestPasswordRecovery(
+        @Body request: AuthRecoveryRequestDto,
+        @Query("redirect_to") redirectTo: String? = null,
+    ): Response<Unit>
 
     @PUT("auth/v1/user")
     suspend fun updateUserPassword(
@@ -43,5 +47,8 @@ interface SupabaseAuthApi {
     suspend fun getCurrentUser(@Header("Authorization") authorization: String): AuthUserDto
 
     @POST("auth/v1/logout")
-    suspend fun logout(@Header("Authorization") authorization: String): Response<Unit>
+    suspend fun logout(
+        @Header("Authorization") authorization: String,
+        @Query("scope") scope: String = "local",
+    ): Response<Unit>
 }

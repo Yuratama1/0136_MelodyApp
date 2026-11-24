@@ -125,7 +125,7 @@ class SupabaseAuthApiTest {
     }
 
     @Test
-    fun recoveryUsesRecoverEndpointAndOmitsAbsentRedirect() = runBlocking {
+    fun recoveryWithoutRedirectSendsOnlyEmailInBody() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200))
 
         val result = api.requestPasswordRecovery(AuthRecoveryRequestDto("test@example.com"))
@@ -134,6 +134,22 @@ class SupabaseAuthApiTest {
         assertTrue(result.isSuccessful)
         assertEquals("POST", request.method)
         assertEquals("/auth/v1/recover", request.path)
+        assertEquals("""{"email":"test@example.com"}""", request.body.readUtf8())
+    }
+
+    @Test
+    fun recoverySendsRedirectAsEncodedQueryAndKeepsEmailInBody() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200))
+        val redirectTo = "melody://reset/path?source=email&name=Melody User"
+
+        val result = api.requestPasswordRecovery(AuthRecoveryRequestDto("test@example.com"), redirectTo)
+        val request = server.takeRequest()
+
+        assertTrue(result.isSuccessful)
+        assertEquals("POST", request.method)
+        assertTrue(request.path.orEmpty().startsWith("/auth/v1/recover?redirect_to="))
+        assertTrue(request.path.orEmpty().contains("%3A%2F%2F"))
+        assertEquals(redirectTo, request.requestUrl?.queryParameter("redirect_to"))
         assertEquals("""{"email":"test@example.com"}""", request.body.readUtf8())
     }
 
@@ -165,7 +181,7 @@ class SupabaseAuthApiTest {
     }
 
     @Test
-    fun logoutUsesPostAndExplicitAuthorization() = runBlocking {
+    fun logoutDefaultsToLocalScopeAndUsesExplicitAuthorization() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(204))
 
         val result = api.logout("Bearer access-test")
@@ -173,8 +189,10 @@ class SupabaseAuthApiTest {
 
         assertTrue(result.isSuccessful)
         assertEquals("POST", request.method)
-        assertEquals("/auth/v1/logout", request.path)
+        assertEquals("/auth/v1/logout?scope=local", request.path)
         assertEquals("Bearer access-test", request.getHeader("Authorization"))
+        assertEquals("local", request.requestUrl?.queryParameter("scope"))
+        assertFalse(request.path.orEmpty().contains("scope=global"))
     }
 
     @Test
