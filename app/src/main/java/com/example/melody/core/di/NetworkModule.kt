@@ -2,6 +2,7 @@ package com.example.melody.core.di
 
 import com.example.melody.BuildConfig
 import com.example.melody.core.config.SupabaseConfig
+import com.example.melody.data.remote.auth.SupabaseAuthApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,4 +53,9 @@ object NetworkModule {
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
+
+    @Provides
+    @Singleton
+    fun provideSupabaseAuthApi(retrofit: Retrofit): SupabaseAuthApi =
+        retrofit.create(SupabaseAuthApi::class.java)
 }
