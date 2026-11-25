@@ -36,6 +36,7 @@ import com.example.melody.feature.auth.AuthViewModel
 fun LoginScreen(
     viewModel: AuthViewModel,
     onRegisterClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
     onLoginSuccess: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -110,6 +111,9 @@ fun LoginScreen(
             } else {
                 Text("Masuk")
             }
+        }
+        TextButton(onClick = onForgotPasswordClick, enabled = !loading) {
+            Text("Lupa Password?")
         }
         TextButton(onClick = onRegisterClick, enabled = !loading) {
             Text("Belum punya akun? Buat akun")

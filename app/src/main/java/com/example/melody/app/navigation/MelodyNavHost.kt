@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.melody.feature.auth.AuthViewModel
 import com.example.melody.feature.auth.login.LoginScreen
+import com.example.melody.feature.auth.recovery.ForgotPasswordScreen
+import com.example.melody.feature.auth.recovery.ResetPasswordScreen
 import com.example.melody.feature.home.HomeScreen
 import com.example.melody.feature.library.LibraryScreen
 import com.example.melody.feature.profile.ProfileScreen
@@ -40,9 +42,42 @@ fun MelodyNavHost(
             LoginScreen(
                 viewModel = authViewModel,
                 onRegisterClick = { navController.navigate(AuthRoute.Register) },
+                onForgotPasswordClick = { navController.navigate(AuthRoute.ForgotPassword) },
                 onLoginSuccess = {
                     navController.navigate(MelodyRoute.Home.route) {
                         popUpTo(MelodyRoute.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable(AuthRoute.ForgotPassword) {
+            ForgotPasswordScreen(
+                viewModel = authViewModel,
+                onBackToLogin = {
+                    authViewModel.clearRecoveryState()
+                    navController.popBackStack()
+                },
+                onContinueToReset = { email ->
+                    navController.navigate("${AuthRoute.ResetPasswordBase}/${android.net.Uri.encode(email)}")
+                },
+            )
+        }
+        composable(
+            route = AuthRoute.ResetPassword,
+            arguments = listOf(navArgument(AuthRoute.EmailArgument) { type = NavType.StringType }),
+        ) { entry ->
+            val email = entry.arguments?.getString(AuthRoute.EmailArgument).orEmpty()
+            ResetPasswordScreen(
+                email = email,
+                viewModel = authViewModel,
+                onBack = {
+                    authViewModel.clearPasswordResetState()
+                    navController.popBackStack()
+                },
+                onResetSuccess = {
+                    navController.navigate(AuthRoute.Login) {
+                        popUpTo(AuthRoute.Login) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -68,8 +103,11 @@ fun MelodyNavHost(
 
 object AuthRoute {
     const val Login = "login"
+    const val ForgotPassword = "forgot-password"
+    const val ResetPasswordBase = "reset-password"
+    const val EmailArgument = "email"
+    const val ResetPassword = "$ResetPasswordBase/{$EmailArgument}"
     const val Register = "register"
     const val VerifyEmailBase = "verify-email"
-    const val EmailArgument = "email"
     const val VerifyEmail = "$VerifyEmailBase/{$EmailArgument}"
 }

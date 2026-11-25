@@ -36,6 +36,12 @@ class AuthViewModel @Inject constructor(
     private val _verificationState = MutableStateFlow<UiState<Unit>>(UiState.Empty)
     val verificationState: StateFlow<UiState<Unit>> = _verificationState.asStateFlow()
 
+    private val _recoveryRequestState = MutableStateFlow<UiState<Unit>>(UiState.Empty)
+    val recoveryRequestState: StateFlow<UiState<Unit>> = _recoveryRequestState.asStateFlow()
+
+    private val _passwordResetState = MutableStateFlow<UiState<Unit>>(UiState.Empty)
+    val passwordResetState: StateFlow<UiState<Unit>> = _passwordResetState.asStateFlow()
+
     init {
         viewModelScope.launch { sessionManager.restoreSession() }
     }
@@ -124,6 +130,73 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun requestPasswordRecovery(email: String) {
+        if (_recoveryRequestState.value is UiState.Loading) return
+        val validationMessage = PasswordRecoveryValidator.validateEmail(email)
+        if (validationMessage != null) {
+            _recoveryRequestState.value = UiState.Error(validationMessage)
+            return
+        }
+        if (!supabaseConfig.isConfigured) {
+            _recoveryRequestState.value = UiState.Error(RECOVERY_UNAVAILABLE)
+            return
+        }
+
+        _recoveryRequestState.value = UiState.Loading
+        viewModelScope.launch {
+            try {
+                authRepository.get().requestPasswordRecovery(email.trim())
+                _recoveryRequestState.value = UiState.Success(Unit)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: AuthRepositoryException) {
+                _recoveryRequestState.value = UiState.Error(exception.message ?: RECOVERY_REQUEST_ERROR)
+            } catch (_: Exception) {
+                _recoveryRequestState.value = UiState.Error(RECOVERY_REQUEST_ERROR)
+            }
+        }
+    }
+
+    fun resetPassword(email: String, otp: String, password: String, confirmPassword: String) {
+        if (_passwordResetState.value is UiState.Loading) return
+        val validationMessage = PasswordRecoveryValidator.validateReset(email, otp, password, confirmPassword)
+        if (validationMessage != null) {
+            _passwordResetState.value = UiState.Error(validationMessage)
+            return
+        }
+        if (!supabaseConfig.isConfigured) {
+            _passwordResetState.value = UiState.Error(RESET_UNAVAILABLE)
+            return
+        }
+
+        _passwordResetState.value = UiState.Loading
+        viewModelScope.launch {
+            try {
+                authRepository.get().resetPassword(email.trim(), otp.trim(), password)
+                _passwordResetState.value = UiState.Success(Unit)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: AuthRepositoryException) {
+                _passwordResetState.value = UiState.Error(exception.message ?: PASSWORD_RESET_ERROR)
+            } catch (_: Exception) {
+                _passwordResetState.value = UiState.Error(PASSWORD_RESET_ERROR)
+            }
+        }
+    }
+
+    fun clearRecoveryRequestState() {
+        if (_recoveryRequestState.value !is UiState.Loading) _recoveryRequestState.value = UiState.Empty
+    }
+
+    fun clearPasswordResetState() {
+        if (_passwordResetState.value !is UiState.Loading) _passwordResetState.value = UiState.Empty
+    }
+
+    fun clearRecoveryState() {
+        clearRecoveryRequestState()
+        clearPasswordResetState()
+    }
+
     fun clearRegistrationState() {
         _registrationState.value = UiState.Empty
     }
@@ -142,5 +215,9 @@ class AuthViewModel @Inject constructor(
         const val VERIFICATION_UNAVAILABLE = "Verifikasi email belum tersedia. Coba lagi nanti."
         const val LOGIN_UNAVAILABLE = "Login belum tersedia. Coba lagi nanti."
         const val LOGIN_ERROR = "Login gagal. Periksa data Anda dan coba lagi."
+        const val RECOVERY_UNAVAILABLE = "Pemulihan password belum tersedia. Coba lagi nanti."
+        const val RESET_UNAVAILABLE = "Reset password belum tersedia. Coba lagi nanti."
+        const val RECOVERY_REQUEST_ERROR = "Permintaan pemulihan belum dapat diproses. Coba lagi nanti."
+        const val PASSWORD_RESET_ERROR = "Password baru tidak dapat diperbarui. Coba lagi."
     }
 }
