@@ -113,10 +113,10 @@ app/src/main/java/com/example/melody/
 │       └── SupabaseApiKeyInterceptor.kt
 ├── data/
 │   ├── remote/auth/                 # Supabase Auth REST API dan DTO (T-06)
-│   ├── repository/auth/            # Auth Repository (T-07/T-08)
+│   ├── repository/auth/            # Auth Repository (T-07/T-08/T-09)
 │   └── session/                    # Session model, enkripsi, penyimpanan, restore/refresh (T-08)
 └── feature/
-    ├── auth/                       # Login, register, verifikasi email, ViewModel (T-07/T-08)
+    ├── auth/                       # Login, recovery/reset password, register, verifikasi (T-07/T-09)
     ├── home/HomeScreen.kt
     ├── library/LibraryScreen.kt
     ├── profile/ProfileScreen.kt
@@ -175,9 +175,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), fondasi Supabase (T-05/T-06), Register dan verifikasi email (T-07), serta Login dan session persistence (T-08) telah diimplementasikan untuk review.**
+**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), fondasi Supabase (T-05/T-06), Register dan verifikasi email (T-07), Login dan session persistence (T-08), serta Forgot Password dan Reset Password (T-09) telah diimplementasikan untuk review.**
 
-T-07 menyediakan registrasi dan verifikasi token email secara manual. T-08 menambahkan form login, validasi respons autentikasi, penyimpanan session terenkripsi dengan key AES-GCM yang dikelola Android Keystore, pemulihan session, dan refresh token. Data session disimpan sebagai ciphertext di `noBackupFilesDir`; token tidak dicatat melalui `toString()` DTO/model. Unit test, Debug Build, serta dua Android Keystore instrumentation test berhasil. Pemeriksaan UI Login dan validasi kosong dilakukan di Pixel_6 AVD (API 37). Login langsung ke Supabase dan restart aplikasi dengan session akun nyata belum diverifikasi karena URL dan Publishable Key Supabase tidak tersedia di checkout ini.
+T-07 menyediakan registrasi dan verifikasi token email secara manual. T-08 menambahkan form login, validasi respons autentikasi, penyimpanan session terenkripsi dengan key AES-GCM yang dikelola Android Keystore, pemulihan session, dan refresh token. Data session disimpan sebagai ciphertext di `noBackupFilesDir`; token tidak dicatat melalui `toString()` DTO/model. T-09 menambahkan permintaan email pemulihan, verifikasi kode OTP bertipe `recovery`, dan penggantian password. Token recovery hanya dipakai sementara di memori untuk request update password dan tidak membentuk session login. Unit test dan Debug Build mencakup perubahan autentikasi. URL dan Publishable Key Supabase tidak tersedia di checkout ini; pengiriman email, konfigurasi template `{{ .Token }}`, dan reset password ke backend aktif belum diverifikasi.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 
