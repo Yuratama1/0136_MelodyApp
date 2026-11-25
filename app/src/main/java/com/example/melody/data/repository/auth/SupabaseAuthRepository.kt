@@ -3,7 +3,10 @@ package com.example.melody.data.repository.auth
 import com.example.melody.data.remote.auth.SupabaseAuthApi
 import com.example.melody.data.remote.auth.dto.AuthApiErrorDto
 import com.example.melody.data.remote.auth.dto.AuthPasswordSignInRequestDto
+import com.example.melody.data.remote.auth.dto.AuthRecoveryRequestDto
+import com.example.melody.data.remote.auth.dto.AuthSessionDto
 import com.example.melody.data.remote.auth.dto.AuthSignUpRequestDto
+import com.example.melody.data.remote.auth.dto.AuthUpdateUserRequestDto
 import com.example.melody.data.remote.auth.dto.AuthVerifyEmailRequestDto
 import com.example.melody.data.session.AuthSession
 import com.example.melody.data.session.AuthSessionManager
@@ -83,6 +86,116 @@ class SupabaseAuthRepository @Inject constructor(
         }
     }
 
+    override suspend fun requestPasswordRecovery(email: String) {
+        try {
+            val response = authApiProvider.get().requestPasswordRecovery(AuthRecoveryRequestDto(email))
+            if (!response.isSuccessful) {
+                val error = response.errorBody()?.use { body ->
+                    runCatching { json.decodeFromString<AuthApiErrorDto>(body.string()) }.getOrNull()
+                }
+                throw AuthRepositoryException(recoveryRequestError(response.code(), error))
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (exception: AuthRepositoryException) {
+            throw exception
+        } catch (_: IOException) {
+            throw AuthRepositoryException(CONNECTION_ERROR)
+        } catch (_: Exception) {
+            throw AuthRepositoryException(RECOVERY_REQUEST_ERROR)
+        }
+    }
+
+    override suspend fun resetPassword(email: String, otp: String, newPassword: String) {
+        var temporaryAccessToken: String? = null
+        try {
+            temporaryAccessToken = verifyRecoveryToken(email, otp)
+            try {
+                authApiProvider.get().updateUserPassword(
+                    authorization = "Bearer ${requireNotNull(temporaryAccessToken)}",
+                    request = AuthUpdateUserRequestDto(password = newPassword),
+                )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: IOException) {
+                throw AuthRepositoryException(CONNECTION_ERROR)
+            } catch (exception: HttpException) {
+                throw AuthRepositoryException(passwordUpdateError(exception.code()))
+            } catch (exception: AuthRepositoryException) {
+                throw exception
+            } catch (exception: Exception) {
+                throw AuthRepositoryException(
+                    if (exception.hasIoCause()) CONNECTION_ERROR else PASSWORD_UPDATE_ERROR,
+                )
+            }
+        } finally {
+            temporaryAccessToken = null
+        }
+    }
+
+    private suspend fun verifyRecoveryToken(email: String, otp: String): String {
+        val response: AuthSessionDto = try {
+            authApiProvider.get().verifyEmail(
+                AuthVerifyEmailRequestDto(email = email, token = otp, type = RECOVERY_VERIFICATION_TYPE),
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: IOException) {
+            throw AuthRepositoryException(CONNECTION_ERROR)
+        } catch (exception: HttpException) {
+            throw AuthRepositoryException(recoveryVerificationError(exception))
+        } catch (exception: Exception) {
+            throw AuthRepositoryException(
+                if (exception.hasIoCause()) CONNECTION_ERROR else RECOVERY_VERIFICATION_ERROR,
+            )
+        }
+
+        return response.accessToken?.takeIf(String::isNotBlank)
+            ?: throw AuthRepositoryException(RECOVERY_SESSION_INVALID)
+    }
+
+    private fun Exception.hasIoCause(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current is IOException) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    private fun recoveryRequestError(statusCode: Int, error: AuthApiErrorDto?): String =
+        if (isRateLimit(statusCode, error)) RATE_LIMITED else RECOVERY_REQUEST_ERROR
+
+    private fun recoveryVerificationError(exception: HttpException): String {
+        val error = readAuthError(exception)
+        return when {
+            isRateLimit(exception.code(), error) -> RATE_LIMITED
+            exception.code() in INVALID_CREDENTIAL_STATUS_CODES || isExpiredOtp(error) -> INVALID_RECOVERY_CODE
+            else -> RECOVERY_VERIFICATION_ERROR
+        }
+    }
+
+    private fun readAuthError(exception: HttpException): AuthApiErrorDto? =
+        exception.response()?.errorBody()?.use { body ->
+            runCatching { json.decodeFromString<AuthApiErrorDto>(body.string()) }.getOrNull()
+        }
+
+    private fun isRateLimit(statusCode: Int, error: AuthApiErrorDto?): Boolean {
+        val detail = listOfNotNull(error?.message, error?.msg, error?.error, error?.error_description, error?.code, error?.error_code)
+            .joinToString(" ").lowercase()
+        return statusCode == HTTP_TOO_MANY_REQUESTS ||
+            listOf("rate limit", "rate_limit", "too many", "over_email_send_rate_limit").any { it in detail }
+    }
+
+    private fun isExpiredOtp(error: AuthApiErrorDto?): Boolean {
+        val detail = listOfNotNull(error?.message, error?.msg, error?.error, error?.error_description, error?.code, error?.error_code)
+            .joinToString(" ").lowercase()
+        return listOf("expired", "otp_expired", "invalid otp", "invalid token", "token has expired").any { it in detail }
+    }
+
+    private fun passwordUpdateError(statusCode: Int): String =
+        if (statusCode == HTTP_TOO_MANY_REQUESTS) RATE_LIMITED else PASSWORD_UPDATE_ERROR
+
     private fun mapLoginHttpException(exception: HttpException): AuthRepositoryException {
         val detail = exception.response()?.errorBody()?.use { it.string() }
             ?.let { runCatching { json.decodeFromString<AuthApiErrorDto>(it) }.getOrNull() }
@@ -124,6 +237,9 @@ class SupabaseAuthRepository @Inject constructor(
 
     private companion object {
         const val DISPLAY_NAME_KEY = "display_name"
+        const val RECOVERY_VERIFICATION_TYPE = "recovery"
+        const val HTTP_TOO_MANY_REQUESTS = 429
+        val INVALID_CREDENTIAL_STATUS_CODES = setOf(400, 422)
         const val SIGNUP_VERIFICATION_TYPE = "signup"
         const val CONNECTION_ERROR = "Tidak dapat terhubung. Periksa koneksi internet dan coba lagi."
         const val EMAIL_ALREADY_REGISTERED = "Email sudah terdaftar. Silakan gunakan email lain."
@@ -135,5 +251,11 @@ class SupabaseAuthRepository @Inject constructor(
         const val LOGIN_RESPONSE_INCOMPLETE = "Respons login tidak lengkap. Silakan coba lagi."
         const val SESSION_SAVE_ERROR = "Login berhasil, tetapi sesi tidak dapat disimpan dengan aman. Coba lagi."
         const val LOGIN_ERROR = "Login gagal. Periksa data Anda dan coba lagi."
+        const val RECOVERY_REQUEST_ERROR = "Permintaan pemulihan belum dapat diproses. Jika alamat email dapat menerima pemulihan, instruksi akan dikirim. Coba lagi nanti."
+        const val RECOVERY_VERIFICATION_ERROR = "Kode pemulihan tidak dapat diverifikasi. Periksa kode dan coba lagi."
+        const val RECOVERY_SESSION_INVALID = "Sesi pemulihan tidak valid. Minta email pemulihan baru."
+        const val INVALID_RECOVERY_CODE = "Kode OTP salah atau sudah kedaluwarsa. Minta kode pemulihan baru jika diperlukan."
+        const val PASSWORD_UPDATE_ERROR = "Password baru tidak dapat diperbarui. Coba lagi."
+        const val RATE_LIMITED = "Terlalu banyak permintaan. Tunggu beberapa saat sebelum mencoba lagi."
     }
 }
