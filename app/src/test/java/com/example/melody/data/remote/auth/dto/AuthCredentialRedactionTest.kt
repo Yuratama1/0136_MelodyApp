@@ -15,7 +15,13 @@ class AuthCredentialRedactionTest {
                 "test-verification-secret",
                 "signup",
             ).toString(),
+            "test-recovery-otp-secret" to AuthVerifyEmailRequestDto(
+                "user@example.com",
+                "test-recovery-otp-secret",
+                "recovery",
+            ).toString(),
             "test-access-secret" to AuthSessionDto(accessToken = "test-access-secret").toString(),
+            "test-new-password-secret" to AuthUpdateUserRequestDto("test-new-password-secret").toString(),
         )
 
         sensitiveValues.forEach { (secret, representation) ->

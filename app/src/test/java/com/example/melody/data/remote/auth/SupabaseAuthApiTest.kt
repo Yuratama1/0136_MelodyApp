@@ -126,7 +126,7 @@ class SupabaseAuthApiTest {
 
     @Test
     fun recoveryWithoutRedirectSendsOnlyEmailInBody() = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(200))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
 
         val result = api.requestPasswordRecovery(AuthRecoveryRequestDto("test@example.com"))
         val request = server.takeRequest()
