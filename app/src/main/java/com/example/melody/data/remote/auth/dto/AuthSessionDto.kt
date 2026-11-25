@@ -11,4 +11,7 @@ data class AuthSessionDto(
     @SerialName("token_type") val tokenType: String? = null,
     @SerialName("expires_in") val expiresIn: Long? = null,
     val user: AuthUserDto? = null,
-)
+) {
+    override fun toString(): String =
+        "AuthSessionDto(tokenType=$tokenType, expiresIn=$expiresIn, userId=${user?.id})"
+}

@@ -6,4 +6,6 @@ import kotlinx.serialization.Serializable
 data class AuthPasswordSignInRequestDto(
     val email: String,
     val password: String,
-)
+) {
+    override fun toString(): String = "AuthPasswordSignInRequestDto(email=$email, password=[REDACTED])"
+}

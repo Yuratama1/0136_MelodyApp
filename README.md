@@ -113,9 +113,10 @@ app/src/main/java/com/example/melody/
 │       └── SupabaseApiKeyInterceptor.kt
 ├── data/
 │   ├── remote/auth/                 # Supabase Auth REST API dan DTO (T-06)
-│   └── repository/auth/            # Auth Repository (T-07)
+│   ├── repository/auth/            # Auth Repository (T-07/T-08)
+│   └── session/                    # Session model, enkripsi, penyimpanan, restore/refresh (T-08)
 └── feature/
-    ├── auth/                       # Register, verifikasi email, ViewModel (T-07)
+    ├── auth/                       # Login, register, verifikasi email, ViewModel (T-07/T-08)
     ├── home/HomeScreen.kt
     ├── library/LibraryScreen.kt
     ├── profile/ProfileScreen.kt
@@ -135,7 +136,7 @@ Konvensi penempatan tanggung jawab untuk kode berikutnya:
 | `data/repository/` | Implementasi repository untuk sumber data. |
 | `feature/<nama>/` | Komponen UI dan logic presentasi per fitur ketika task fitur disetujui. |
 
-Package yang belum memiliki kode tidak dibuat sebagai placeholder. T-07 menambahkan Auth Repository dan Auth ViewModel khusus untuk registrasi serta verifikasi email; data/session tidak disimpan secara persisten.
+Package yang belum memiliki kode tidak dibuat sebagai placeholder. T-07 menambahkan registrasi dan verifikasi email. T-08 menambahkan login dan fondasi session persisten terenkripsi.
 
 `UiState<T>` di `core/common/UiState.kt` menyediakan `Loading`, `Success(data)`, `Empty`, dan `Error(message, cause)`. `AuthViewModel` T-07 memakai state tersebut untuk mengelola operasi registrasi dan verifikasi email.
 
@@ -174,9 +175,9 @@ Backend dan dokumentasi API dikelola pada repository terpisah:
 
 ## Status Pengembangan
 
-**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), fondasi Supabase (T-05/T-06), serta Register dan verifikasi email (T-07) telah diimplementasikan untuk review.**
+**Status saat ini: Fondasi proyek Android (T-02), arsitektur dasar (T-03), shell navigasi (T-04), fondasi Supabase (T-05/T-06), Register dan verifikasi email (T-07), serta Login dan session persistence (T-08) telah diimplementasikan untuk review.**
 
-Fitur T-07 menyediakan form registrasi, validasi lokal, permintaan signup dengan metadata nama tampilan, serta verifikasi token secara manual. Session hasil verifikasi tidak disimpan dan login otomatis belum diterapkan. Unit test dan Debug Build dijalankan; alur ke project Supabase aktif belum diverifikasi karena URL, Publishable Key, serta konfigurasi template email project tidak tersedia di checkout ini.
+T-07 menyediakan registrasi dan verifikasi token email secara manual. T-08 menambahkan form login, validasi respons autentikasi, penyimpanan session terenkripsi dengan key AES-GCM yang dikelola Android Keystore, pemulihan session, dan refresh token. Data session disimpan sebagai ciphertext di `noBackupFilesDir`; token tidak dicatat melalui `toString()` DTO/model. Unit test, Debug Build, serta dua Android Keystore instrumentation test berhasil. Pemeriksaan UI Login dan validasi kosong dilakukan di Pixel_6 AVD (API 37). Login langsung ke Supabase dan restart aplikasi dengan session akun nyata belum diverifikasi karena URL dan Publishable Key Supabase tidak tersedia di checkout ini.
 
 Pengembangan dilakukan secara bertahap berdasarkan daftar task dan kriteria penerimaan yang telah disetujui. Fitur hanya akan dinyatakan selesai setelah implementasi dan bukti pengujiannya ditinjau.
 

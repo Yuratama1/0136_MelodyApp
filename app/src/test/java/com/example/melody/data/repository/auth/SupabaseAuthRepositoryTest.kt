@@ -1,6 +1,14 @@
 package com.example.melody.data.repository.auth
 
 import com.example.melody.data.remote.auth.SupabaseAuthApi
+import com.example.melody.data.session.AuthSession
+import com.example.melody.data.session.AuthSessionMapper
+import com.example.melody.data.session.AuthSessionManager
+import com.example.melody.data.session.AuthState
+import com.example.melody.data.session.EpochClock
+import javax.inject.Provider
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -17,6 +25,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 class SupabaseAuthRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var repository: SupabaseAuthRepository
+    private lateinit var sessionManager: TestAuthSessionManager
     private var serverIsRunning = false
 
     @Before
@@ -29,7 +38,13 @@ class SupabaseAuthRepositoryTest {
             .addConverterFactory(testJson.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(SupabaseAuthApi::class.java)
-        repository = SupabaseAuthRepository(api, testJson)
+        sessionManager = TestAuthSessionManager()
+        repository = SupabaseAuthRepository(
+            authApiProvider = Provider { api },
+            json = testJson,
+            sessionManagerProvider = Provider { sessionManager },
+            epochClock = object : EpochClock { override fun nowSeconds() = TEST_NOW },
+        )
     }
 
     @After
@@ -50,6 +65,56 @@ class SupabaseAuthRepositoryTest {
             """{"email":"melody@example.com","password":"password1","data":{"display_name":"Melody User"}}""",
             request.body.readUtf8(),
         )
+    }
+
+    @Test
+    fun loginUsesPasswordGrantAndPersistsOnlyConfirmedCompleteSession() = runBlocking {
+        server.enqueue(MockResponse().setBody(VERIFIED_LOGIN_JSON))
+
+        val session = repository.login("melody@example.com", "test-password")
+        val request = server.takeRequest()
+
+        assertEquals("POST", request.method)
+        assertEquals("/auth/v1/token?grant_type=password", request.path)
+        assertEquals(
+            """{"email":"melody@example.com","password":"test-password"}""",
+            request.body.readUtf8(),
+        )
+        assertEquals("user-1", session.userId)
+        assertEquals("Melody", session.displayName)
+        assertEquals(session, sessionManager.persistedSession)
+    }
+
+    @Test
+    fun loginRejectsUnverifiedAccountWithoutPersistingSession() = runBlocking {
+        server.enqueue(MockResponse().setBody(UNVERIFIED_LOGIN_JSON))
+
+        val exception = runCatching { repository.login("melody@example.com", "test-password") }.exceptionOrNull()
+
+        assertEquals(AuthSessionMapper.EMAIL_NOT_CONFIRMED, exception?.message)
+        assertEquals(null, sessionManager.persistedSession)
+    }
+
+    @Test
+    fun loginRejectsIncompleteSessionWithoutPersisting() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"access_token":"access-test","refresh_token":"refresh-test"}"""))
+
+        val exception = runCatching { repository.login("melody@example.com", "test-password") }.exceptionOrNull()
+
+        assertEquals(AuthSessionMapper.INCOMPLETE_RESPONSE, exception?.message)
+        assertEquals(null, sessionManager.persistedSession)
+    }
+
+    @Test
+    fun loginMapsInvalidCredentialsAndUnconfirmedEmailErrors() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"msg":"Invalid login credentials"}"""))
+        val invalidCredentials = runCatching { repository.login("melody@example.com", "wrong-password") }.exceptionOrNull()
+        assertEquals("Email atau password salah. Periksa kembali lalu coba lagi.", invalidCredentials?.message)
+
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"msg":"Email not confirmed"}"""))
+        val unconfirmed = runCatching { repository.login("melody@example.com", "test-password") }.exceptionOrNull()
+        assertEquals("Email belum diverifikasi. Verifikasi email sebelum masuk.", unconfirmed?.message)
+        assertEquals(null, sessionManager.persistedSession)
     }
 
     @Test
@@ -124,5 +189,23 @@ class SupabaseAuthRepositoryTest {
 
     private companion object {
         val testJson = Json { ignoreUnknownKeys = true }
+        const val TEST_NOW = 1_800_000_000L
+        const val VERIFIED_LOGIN_JSON = """{"access_token":"access-test","refresh_token":"refresh-test","token_type":"bearer","expires_in":3600,"user":{"id":"user-1","email":"melody@example.com","email_confirmed_at":"2026-01-01T00:00:00Z","user_metadata":{"display_name":"Melody"}}}"""
+        const val UNVERIFIED_LOGIN_JSON = """{"access_token":"access-test","refresh_token":"refresh-test","token_type":"bearer","expires_in":3600,"user":{"id":"user-1","email":"melody@example.com"}}"""
     }
+}
+
+private class TestAuthSessionManager : AuthSessionManager {
+    private val state = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+    override val authState: StateFlow<AuthState> = state
+    var persistedSession: AuthSession? = null
+
+    override suspend fun restoreSession() = Unit
+
+    override suspend fun persistLoginSession(session: AuthSession) {
+        persistedSession = session
+        state.value = AuthState.Authenticated(session)
+    }
+
+    override suspend fun getValidAccessToken(): String? = persistedSession?.accessToken
 }

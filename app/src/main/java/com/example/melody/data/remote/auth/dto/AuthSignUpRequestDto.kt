@@ -12,4 +12,6 @@ data class AuthSignUpRequestDto(
     val password: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val data: JsonObject? = null,
-)
+) {
+    override fun toString(): String = "AuthSignUpRequestDto(email=$email, password=[REDACTED], data=$data)"
+}

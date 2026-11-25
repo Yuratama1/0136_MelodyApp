@@ -14,4 +14,7 @@ data class AuthVerifyEmailRequestDto(
     @SerialName("redirect_to")
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val redirectTo: String? = null,
-)
+) {
+    override fun toString(): String =
+        "AuthVerifyEmailRequestDto(email=$email, token=[REDACTED], type=$type, redirectTo=$redirectTo)"
+}

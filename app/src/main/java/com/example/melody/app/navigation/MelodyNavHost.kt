@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.melody.feature.auth.AuthViewModel
+import com.example.melody.feature.auth.login.LoginScreen
 import com.example.melody.feature.home.HomeScreen
 import com.example.melody.feature.library.LibraryScreen
 import com.example.melody.feature.profile.ProfileScreen
@@ -30,7 +31,22 @@ fun MelodyNavHost(
         composable(MelodyRoute.Search.route) { SearchScreen() }
         composable(MelodyRoute.Library.route) { LibraryScreen() }
         composable(MelodyRoute.Profile.route) {
-            ProfileScreen(onRegisterClick = { navController.navigate(AuthRoute.Register) })
+            ProfileScreen(
+                onLoginClick = { navController.navigate(AuthRoute.Login) },
+                onRegisterClick = { navController.navigate(AuthRoute.Register) },
+            )
+        }
+        composable(AuthRoute.Login) {
+            LoginScreen(
+                viewModel = authViewModel,
+                onRegisterClick = { navController.navigate(AuthRoute.Register) },
+                onLoginSuccess = {
+                    navController.navigate(MelodyRoute.Home.route) {
+                        popUpTo(MelodyRoute.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
         }
         composable(AuthRoute.Register) {
             RegisterScreen(
@@ -51,6 +67,7 @@ fun MelodyNavHost(
 }
 
 object AuthRoute {
+    const val Login = "login"
     const val Register = "register"
     const val VerifyEmailBase = "verify-email"
     const val EmailArgument = "email"

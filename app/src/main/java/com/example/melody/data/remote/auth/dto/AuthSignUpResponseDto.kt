@@ -36,4 +36,7 @@ data class AuthSignUpResponseDto(
     } else {
         AuthUserDto(id, email, emailConfirmedAt, confirmedAt, createdAt, updatedAt, userMetadata, appMetadata)
     }
+
+    override fun toString(): String =
+        "AuthSignUpResponseDto(hasSession=${accessToken != null && refreshToken != null}, userId=${user?.id ?: id})"
 }

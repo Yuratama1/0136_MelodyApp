@@ -6,4 +6,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AuthRefreshTokenRequestDto(
     @SerialName("refresh_token") val refreshToken: String,
-)
+) {
+    override fun toString(): String = "AuthRefreshTokenRequestDto(refreshToken=[REDACTED])"
+}
